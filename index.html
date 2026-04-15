@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中国古建筑数字展厅</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#fef2f2',
+                            100: '#fee2e2',
+                            200: '#fecaca',
+                            300: '#fca5a5',
+                            400: '#f87171',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                            700: '#b91c1c',
+                            800: '#991b1b',
+                            900: '#7f1d1d'
+                        },
+                        gold: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            200: '#fde68a',
+                            300: '#fcd34d',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                            800: '#92400e',
+                            900: '#78350f'
+                        },
+                        dark: {
+                            800: '#1e293b',
+                            900: '#0f172a',
+                            950: '#020617'
+                        }
+                    },
+                    fontFamily: {
+                        'serif': ['"Noto Serif SC"', '"Source Han Serif SC"', 'SimSun', 'STSong', 'serif'],
+                        'kai': ['"KaiTi"', '"STKaiti"', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Noto Serif SC', 'Source Han Serif SC', SimSun, STSong, serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        
+        /* 导航栏样式 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(251, 191, 36, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .navbar.scrolled {
+            background: rgba(15, 23, 42, 0.98);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .nav-link {
+            position: relative;
+            color: #e2e8f0;
+            transition: color 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            color: #fbbf24;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #fbbf24, #dc2626);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        
+        /* 首屏大图区 */
+        .hero-section {
+            position: relative;
+            height: 100vh;
+            min-height: 600px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+        }
+        
+        .hero-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('11.jpg') center/cover;
+            opacity: 0.5;
+        }
+        
+        .hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(15, 23, 42, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 0 20px;
+        }
+        
+        .hero-title {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 4px 20px rgba(251, 191, 36, 0.3);
+            margin-bottom: 1rem;
+            letter-spacing: 0.1em;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            color: #cbd5e1;
+            font-weight: 400;
+            letter-spacing: 0.2em;
+        }
+        
+        .hero-decoration {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border: 2px solid rgba(251, 191, 36, 0.3);
+            border-radius: 50%;
+            animation: rotate 20s linear infinite;
+        }
+        
+        .hero-decoration:nth-child(1) {
+            top: 10%;
+            left: 10%;
+        }
+        
+        .hero-decoration:nth-child(2) {
+            bottom: 10%;
+            right: 10%;
+            animation-direction: reverse;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 3D模型展示区 */
+        .model-section {
+            padding: 100px 20px;
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            position: relative;
+        }
+        
+        .model-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #fbbf24, transparent);
+        }
+        
+        .section-title {
+            font-size: clamp(2rem, 5vw, 3rem);
+            color: #fbbf24;
+            text-align: center;
+            margin-bottom: 3rem;
+            position: relative;
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #dc2626, #fbbf24);
+        }
+        
+        .model-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 16px;
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 600px;
+            position: relative;
+        }
+        
+        .model-controls {
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4);
+        }
+        
+        .control-btn.secondary {
+            background: transparent;
+            border: 1px solid #fbbf24;
+            color: #fbbf24;
+        }
+        
+        .control-btn.secondary:hover {
+            background: rgba(251, 191, 36, 0.1);
+        }
+        
+        /* 图文介绍区 */
+        .intro-section {
+            padding: 100px 20px;
+            background: #0f172a;
+        }
+        
+        .intro-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+        
+        @media (max-width: 768px) {
+            .intro-container {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+        }
+        
+        .intro-image {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        .intro-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: transform 0.5s ease;
+        }
+        
+        .intro-image:hover img {
+            transform: scale(1.05);
+        }
+        
+        .intro-image::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 2px solid rgba(251, 191, 36, 0.3);
+            border-radius: 16px;
+            pointer-events: none;
+        }
+        
+        .intro-content h3 {
+            font-size: 2rem;
+            color: #fbbf24;
+            margin-bottom: 1.5rem;
+            position: relative;
+            padding-bottom: 15px;
+        }
+        
+        .intro-content h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(90deg, #dc2626, #fbbf24);
+        }
+        
+        .intro-content p {
+            color: #cbd5e1;
+            line-height: 2;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            text-align: justify;
+        }
+        
+        .highlight {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+        
+        /* 卡片展示区 */
+        .cards-section {
+            padding: 100px 20px;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+        }
+        
+        .cards-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        
+        .knowledge-card {
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(251, 191, 36, 0.1);
+            transition: all 0.4s ease;
+            cursor: pointer;
+        }
+        
+        .knowledge-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(251, 191, 36, 0.4);
+            box-shadow: 0 20px 40px rgba(251, 191, 36, 0.1);
+        }
+        
+        .card-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .card-image .placeholder-icon {
+            font-size: 4rem;
+            color: rgba(251, 191, 36, 0.3);
+        }
+        
+        .card-content {
+            padding: 24px;
+        }
+        
+        .card-content h4 {
+            font-size: 1.3rem;
+            color: #fbbf24;
+            margin-bottom: 12px;
+        }
+        
+        .card-content p {
+            color: #94a3b8;
+            line-height: 1.8;
+            font-size: 0.95rem;
+        }
+        
+        .card-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(220, 38, 38, 0.2);
+            color: #f87171;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin-top: 12px;
+        }
+        
+        /* 页脚 */
+        .footer {
+            padding: 60px 20px 30px;
+            background: #020617;
+            border-top: 1px solid rgba(251, 191, 36, 0.1);
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .footer-logo {
+            font-size: 1.8rem;
+            color: #fbbf24;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .footer-links a {
+            color: #64748b;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-links a:hover {
+            color: #fbbf24;
+        }
+        
+        .footer-copyright {
+            color: #475569;
+            font-size: 0.9rem;
+            padding-top: 20px;
+            border-top: 1px solid rgba(251, 191, 36, 0.1);
+        }
+        
+        /* 滚动动画 */
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease;
+        }
+        
+        .scroll-reveal.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* 加载提示 */
+        .loading-tip {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fbbf24;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+        
+        .loading-tip .material-icons {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 10px;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="text-2xl font-bold text-gold-400 flex items-center gap-2">
+                <span class="material-icons text-3xl">account_balance</span>
+                <span>古建数字展厅</span>
+            </div>
+            <div class="hidden md:flex gap-8">
+                <a href="#" class="nav-link">首页</a>
+                <a href="#model" class="nav-link">古建筑展示</a>
+                <a href="#intro" class="nav-link">文化解读</a>
+                <a href="#cards" class="nav-link">知识卡片</a>
+                <a href="#footer" class="nav-link">关于</a>
+            </div>
+            <button class="md:hidden text-gold-400" id="mobile-menu-btn">
+                <span class="material-icons">menu</span>
+            </button>
+        </div>
+        <!-- 移动端菜单 -->
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="px-6 py-4 space-y-3 border-t border-gold-400/20">
+                <a href="#" class="block nav-link py-2">首页</a>
+                <a href="#model" class="block nav-link py-2">古建筑展示</a>
+                <a href="#intro" class="block nav-link py-2">文化解读</a>
+                <a href="#cards" class="block nav-link py-2">知识卡片</a>
+                <a href="#footer" class="block nav-link py-2">关于</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 首屏大图区 -->
+    <section class="hero-section">
+        <div class="hero-bg"></div>
+        <div class="hero-overlay"></div>
+        <div class="hero-decoration"></div>
+        <div class="hero-decoration"></div>
+        <div class="hero-content animate__animated animate__fadeInUp">
+            <h1 class="hero-title">中国古建筑数字展厅</h1>
+            <p class="hero-subtitle">千年营造 · 匠心传承 · 数字重生</p>
+        </div>
+    </section>
+
+    <!-- 3D模型展示区 -->
+    <section class="model-section" id="model">
+        <h2 class="section-title scroll-reveal">360°观察古建筑</h2>
+        <div class="model-container scroll-reveal">
+            <div id="canvas-container">
+                <div class="loading-tip" id="loading-tip">
+                    <span class="material-icons">refresh</span>
+                    正在加载3D模型...
+                </div>
+            </div>
+            <div class="model-controls">
+                <button class="control-btn" id="reset-view">
+                    <span class="material-icons">refresh</span>
+                    重置视角
+                </button>
+                <button class="control-btn secondary" id="toggle-rotate">
+                    <span class="material-icons">360</span>
+                    自动旋转
+                </button>
+                <button class="control-btn secondary" id="toggle-wireframe">
+                    <span class="material-icons">grid_on</span>
+                    线框模式
+                </button>
+            </div>
+        </div>
+        <p class="text-center text-slate-400 mt-6 text-sm">
+            提示：使用鼠标左键旋转，右键平移，滚轮缩放
+        </p>
+    </section>
+
+    <!-- 图文介绍区 -->
+    <section class="intro-section" id="intro">
+        <div class="intro-container">
+            <div class="intro-image scroll-reveal">
+                <img src="https://images.unsplash.com/photo-1599571234909-29ed5d1321d6?w=800&q=80" alt="中国古建筑斗拱">
+            </div>
+            <div class="intro-content scroll-reveal">
+                <h3>斗拱与榫卯</h3>
+                <p>
+                    <span class="highlight">斗拱</span>是中国古代建筑特有的一种结构构件，位于柱顶与梁枋之间，起着承上启下、传递荷载的作用。它由斗、拱、昂等部件组合而成，层层叠叠，宛如一朵朵盛开的花朵，既具有结构功能，又富有装饰美感。
+                </p>
+                <p>
+                    <span class="highlight">榫卯</span>则是中国传统木作工艺的精髓，通过凹凸结合的连接方式，使木构件之间紧密结合，无需一钉一铆即可稳固连接。这种"以柔克刚"的智慧，让古建筑能够历经千年风雨而不倒，甚至在地震中展现出惊人的柔韧性。
+                </p>
+                <p>
+                    从唐代的雄浑大气到宋代的精巧雅致，再到明清的繁复华丽，斗拱的演变见证了中国建筑艺术的发展历程，也承载着中华民族对天地自然的敬畏与理解。
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 卡片展示区 -->
+    <section class="cards-section" id="cards">
+        <h2 class="section-title scroll-reveal">古建筑知识</h2>
+        <div class="cards-container">
+            <div class="knowledge-card scroll-reveal">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1545569341-9eb8b30979d9?w=600&q=80" alt="唐代建筑">
+                </div>
+                <div class="card-content">
+                    <h4>唐代建筑特征</h4>
+                    <p>唐代建筑气魄宏伟，严整开朗，斗拱硕大，屋檐高挑。现存唐代木构建筑极少，山西五台山佛光寺东大殿是其中最著名的代表。</p>
+                    <span class="card-tag">雄浑大气</span>
+                </div>
+            </div>
+            
+            <div class="knowledge-card scroll-reveal">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1569949381669-ecf31ae8e613?w=600&q=80" alt="宋代建筑">
+                </div>
+                <div class="card-content">
+                    <h4>宋代营造法式</h4>
+                    <p>《营造法式》是北宋官方颁布的建筑设计施工规范，是中国古代最完整的建筑技术书籍，标志着中国古代建筑技术的高度成熟。</p>
+                    <span class="card-tag">规范严谨</span>
+                </div>
+            </div>
+            
+            <div class="knowledge-card scroll-reveal">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=600&q=80" alt="明清故宫">
+                </div>
+                <div class="card-content">
+                    <h4>明清故宫</h4>
+                    <p>北京故宫是世界上现存规模最大、保存最为完整的木质结构古建筑群，体现了中国古代宫殿建筑的最高成就，被誉为世界五大宫之首。</p>
+                    <span class="card-tag">皇家气派</span>
+                </div>
+            </div>
+            
+            <div class="knowledge-card scroll-reveal">
+                <div class="card-image">
+                    <img src="https://images.unsplash.com/photo-1528164344705-47542687000d?w=600&q=80" alt="园林建筑">
+                </div>
+                <div class="card-content">
+                    <h4>江南园林</h4>
+                    <p>苏州园林是江南园林的代表，以小巧精致、曲折幽深著称，讲究"虽由人作，宛自天开"，将自然山水浓缩于咫尺之间。</p>
+                    <span class="card-tag">精巧雅致</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer" id="footer">
+        <div class="footer-content">
+            <div class="footer-logo">中国古建筑数字展厅</div>
+            <div class="footer-links">
+                <a href="#">关于我们</a>
+                <a href="#">联系方式</a>
+                <a href="#">使用说明</a>
+                <a href="#">隐私政策</a>
+            </div>
+            <div class="footer-copyright">
+                <p>© 2024 中国古建筑数字展厅 | 传承千年营造智慧</p>
+                <p class="mt-2 text-sm">本网站用于展示中国传统建筑文化，部分图片来源于Unsplash</p>
+            </div>
+        </div>
+    </footer>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+
+        // 3D场景变量
+        let scene, camera, renderer, controls, model;
+        let isAutoRotating = false;
+        let isWireframe = false;
+
+        // 初始化3D场景
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+            
+            // 创建场景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1e293b);
+            
+            // 创建相机
+            camera = new THREE.PerspectiveCamera(
+                45,
+                container.clientWidth / container.clientHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 0, 5);
+            
+            // 创建渲染器
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+            
+            // 创建控制器
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 2;
+            controls.maxDistance = 10;
+            
+            // 添加灯光
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 5, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 1024;
+            directionalLight.shadow.mapSize.height = 1024;
+            scene.add(directionalLight);
+            
+            const pointLight = new THREE.PointLight(0xfbbf24, 0.5);
+            pointLight.position.set(-5, 3, -5);
+            scene.add(pointLight);
+            
+            // 加载3D模型
+            loadModel();
+            
+            // 响应窗口大小变化
+            window.addEventListener('resize', onWindowResize);
+            
+            // 开始动画循环
+            animate();
+        }
+
+        // 加载GLTF模型
+        function loadModel() {
+            const loader = new GLTFLoader();
+            const modelUrl = 'https://threejs.org/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf';
+            
+            loader.load(
+                modelUrl,
+                function (gltf) {
+                    model = gltf.scene;
+                    
+                    // 调整模型位置和大小
+                    const box = new THREE.Box3().setFromObject(model);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 2 / maxDim;
+                    model.scale.setScalar(scale);
+                    
+                    model.position.sub(center.multiplyScalar(scale));
+                    
+                    // 启用阴影
+                    model.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    
+                    scene.add(model);
+                    
+                    // 隐藏加载提示
+                    document.getElementById('loading-tip').style.display = 'none';
+                },
+                function (xhr) {
+                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                },
+                function (error) {
+                    console.error('加载模型失败:', error);
+                    document.getElementById('loading-tip').innerHTML = `
+                        <span class="material-icons">error</span>
+                        模型加载失败，请刷新页面重试
+                    `;
+                }
+            );
+        }
+
+        // 窗口大小变化处理
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (isAutoRotating && model) {
+                model.rotation.y += 0.005;
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // 控制按钮事件
+        document.getElementById('reset-view').addEventListener('click', () => {
+            if (model) {
+                model.rotation.set(0, 0, 0);
+            }
+            camera.position.set(0, 0, 5);
+            controls.reset();
+        });
+
+        document.getElementById('toggle-rotate').addEventListener('click', () => {
+            isAutoRotating = !isAutoRotating;
+            const btn = document.getElementById('toggle-rotate');
+            btn.style.background = isAutoRotating ? 'rgba(251, 191, 36, 0.2)' : 'transparent';
+        });
+
+        document.getElementById('toggle-wireframe').addEventListener('click', () => {
+            isWireframe = !isWireframe;
+            if (model) {
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material.wireframe = isWireframe;
+                    }
+                });
+            }
+            const btn = document.getElementById('toggle-wireframe');
+            btn.style.background = isWireframe ? 'rgba(251, 191, 36, 0.2)' : 'transparent';
+        });
+
+        // 初始化3D场景
+        init3D();
+
+        // 导航栏滚动效果
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // 移动端菜单切换
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+
+        // 滚动显示动画
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealed');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.scroll-reveal').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
